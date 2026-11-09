@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>StopMotion RAN</title>
+  <meta name="description" content="Crie animações em stop motion com a câmera do seu dispositivo.">
+  <meta name="theme-color" content="#1f2a44">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="favicon.svg" alt="" width="28" height="28">
+      <span>StopMotion RAN</span>
+    </div>
+    <div class="who" id="whoBox" hidden>
+      <span class="who-name" id="whoName"></span>
+      <span class="who-class" id="whoClass"></span>
+      <button class="btn ghost small" id="btnLogout" type="button">Trocar aluno</button>
+    </div>
+  </header>
+
+  <!-- ============ TELA 1: IDENTIFICAÇÃO ============ -->
+  <main id="screenLogin" class="screen">
+    <section class="card login-card">
+      <h1>Olá! Vamos animar? 🎬</h1>
+      <p class="muted">Antes de começar, diga quem você é. Seus projetos ficam salvos neste dispositivo com o seu nome.</p>
+      <form id="loginForm" autocomplete="on">
+        <label class="field">
+          <span>Seu nome</span>
+          <input id="inName" name="name" type="text" required maxlength="60" placeholder="Ex.: Ana Souza" autocomplete="name">
+        </label>
+        <label class="field">
+          <span>Turma</span>
+          <input id="inClass" name="class" type="text" required maxlength="30" placeholder="Ex.: 6º A" list="classList">
+          <datalist id="classList"></datalist>
+        </label>
+        <label class="field">
+          <span>Escola <small class="muted">(opcional)</small></span>
+          <input id="inSchool" name="school" type="text" maxlength="80" placeholder="Nome da escola">
+        </label>
+        <button class="btn primary big" type="submit">Entrar</button>
+      </form>
+      <div id="recentStudents" class="recent" hidden>
+        <p class="muted small">Alunos que já usaram este dispositivo:</p>
+        <div id="recentList" class="chips"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ TELA 2: PROJETOS ============ -->
+  <main id="screenProjects" class="screen" hidden>
+    <div class="screen-head">
+      <h1>Meus projetos</h1>
+      <div class="actions">
+        <label class="btn ghost" title="Abrir um projeto salvo em arquivo (.stopmotion.json)">
+          Importar projeto
+          <input id="inImportProject" type="file" accept=".json,application/json" hidden>
+        </label>
+        <button class="btn primary" id="btnNewProject" type="button">+ Novo projeto</button>
+      </div>
+    </div>
+    <div id="projectGrid" class="project-grid"></div>
+    <div id="emptyProjects" class="empty" hidden>
+      <p>Você ainda não tem nenhum projeto.</p>
+      <p class="muted">Clique em <strong>+ Novo projeto</strong> para começar sua primeira animação.</p>
+    </div>
+  </main>
+
+  <!-- ============ TELA 3: EDITOR ============ -->
+  <main id="screenEditor" class="screen editor" hidden>
+    <div class="editor-head">
+      <button class="btn ghost small" id="btnBack" type="button">← Projetos</button>
+      <input id="inTitle" class="title-input" type="text" maxlength="80" aria-label="Nome do projeto">
+      <span class="save-state" id="saveState" aria-live="polite"></span>
+    </div>
+
+    <div class="editor-body">
+      <section class="stage-wrap">
+        <div class="stage" id="stage">
+          <video id="video" playsinline muted autoplay></video>
+          <canvas id="onionCanvas" class="layer"></canvas>
+          <canvas id="viewCanvas" class="layer" hidden></canvas>
+          <div id="gridOverlay" class="grid-overlay" hidden></div>
+          <div id="countdown" class="countdown" hidden></div>
+          <div id="flash" class="flash"></div>
+          <div id="stageMsg" class="stage-msg" hidden></div>
+          <div class="mode-tag" id="modeTag">Câmera</div>
+        </div>
+
+        <div class="capture-bar">
+          <button class="btn ghost" id="btnLive" type="button" title="Voltar para a câmera">📷 Câmera</button>
+          <button class="btn capture" id="btnCapture" type="button" title="Tirar foto (barra de espaço)">
+            <span class="dot"></span><span>Fotografar</span>
+          </button>
+          <button class="btn ghost" id="btnPlay" type="button" title="Ver prévia (P)">▶ Prévia</button>
+        </div>
+
+        <section class="timeline-wrap">
+          <div class="timeline-head">
+            <h2>Quadros <span class="muted" id="frameCount">(0)</span></h2>
+            <span class="muted small">Arraste para reordenar</span>
+          </div>
+          <ol class="timeline" id="timeline"></ol>
+        </section>
+        <details class="panel" open>
+          <summary>Câmera e ajudas</summary>
+          <div class="panel-grid">
+            <label class="field inline">
+              <span>Câmera</span>
+              <select id="selCamera"></select>
+            </label>
+            <label class="toggle"><input type="checkbox" id="chkMirror"> Espelhar imagem</label>
+            <label class="toggle"><input type="checkbox" id="chkGrid"> Grade (regra dos terços)</label>
+            <label class="toggle"><input type="checkbox" id="chkOnion" checked> Papel de cebola</label>
+            <label class="field inline">
+              <span>Transparência</span>
+              <input type="range" id="rngOnion" min="10" max="80" value="35">
+            </label>
+            <label class="field inline">
+              <span>Quadros anteriores</span>
+              <select id="selOnionCount">
+                <option value="1" selected>1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+              </select>
+            </label>
+            <label class="field inline">
+              <span>Temporizador</span>
+              <select id="selTimer">
+                <option value="0" selected>Desligado</option>
+                <option value="3">3 segundos</option>
+                <option value="5">5 segundos</option>
+                <option value="10">10 segundos</option>
+              </select>
+            </label>
+            <label class="btn ghost small" title="Adicionar imagens do computador como quadros">
+              Adicionar imagens
+              <input id="inAddImages" type="file" accept="image/*" multiple hidden>
+            </label>
+          </div>
+        </details>
+      </section>
+
+      <aside class="side">
+        <div class="panel">
+          <h2>Velocidade</h2>
+          <label class="field">
+            <span><strong id="fpsLabel">8</strong> quadros por segundo</span>
+            <input type="range" id="rngFps" min="1" max="24" value="8">
+          </label>
+          <p class="muted small" id="durationLabel">Duração: 0,0 s</p>
+          <label class="toggle"><input type="checkbox" id="chkLoop" checked> Repetir prévia</label>
+        </div>
+
+        <div class="panel">
+          <h2>Quadro selecionado</h2>
+          <p class="muted small" id="selInfo">Nenhum quadro.</p>
+          <div class="btn-row">
+            <button class="btn ghost small" id="btnLeft" type="button" title="Mover para a esquerda">◀ Mover</button>
+            <button class="btn ghost small" id="btnRight" type="button" title="Mover para a direita">Mover ▶</button>
+            <button class="btn ghost small" id="btnDup" type="button" title="Duplicar quadro (D)">Duplicar</button>
+            <button class="btn danger small" id="btnDel" type="button" title="Apagar quadro (Delete)">Apagar</button>
+          </div>
+          <p class="muted small">Novas fotos entram logo depois do quadro selecionado.</p>
+        </div>
+
+        <div class="panel">
+          <h2>Salvar e exportar</h2>
+          <div class="btn-col">
+            <button class="btn primary" id="btnExport" type="button">⬇ Baixar vídeo</button>
+            <button class="btn ghost" id="btnExportProject" type="button" title="Guarda o projeto num arquivo para continuar em outro computador">💾 Baixar arquivo do projeto</button>
+          </div>
+          <div class="progress" id="exportProgress" hidden><div class="bar" id="exportBar"></div></div>
+          <p class="muted small">O projeto é salvo automaticamente neste dispositivo.</p>
+        </div>
+
+        <details class="panel help">
+          <summary>Atalhos de teclado</summary>
+          <ul class="small">
+            <li><kbd>Espaço</kbd> tirar foto</li>
+            <li><kbd>P</kbd> prévia / parar</li>
+            <li><kbd>←</kbd> <kbd>→</kbd> escolher quadro</li>
+            <li><kbd>Delete</kbd> apagar quadro</li>
+            <li><kbd>D</kbd> duplicar quadro</li>
+            <li><kbd>Ctrl</kbd>+<kbd>Z</kbd> desfazer apagar</li>
+          </ul>
+        </details>
+      </aside>
+    </div>
+
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+    <span id="toastMsg"></span>
+    <button class="btn ghost small" id="toastAction" type="button" hidden></button>
+  </div>
+
+  <script src="js/db.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

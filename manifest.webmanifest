@@ -1,0 +1,11 @@
+{
+  "name": "StopMotion RAN",
+  "short_name": "StopMotion",
+  "description": "Crie animações em stop motion com a câmera do seu dispositivo.",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f1ea",
+  "theme_color": "#1f2a44",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
