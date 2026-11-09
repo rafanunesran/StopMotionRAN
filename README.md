@@ -102,3 +102,13 @@ apps-script/          script do Google Apps Script que recebe os vídeos no Driv
 vercel.json           cabeçalhos para a Vercel (permissão da câmera)
 manifest.webmanifest  permite "instalar" o site no tablet/celular
 ```
+
+## Tarefas do ProfSis
+
+No ProfSis (SisProf), o botão **🎬** de uma atividade na planilha de notas cria um link de entrega, por exemplo `https://stopmotionran.vercel.app/?tarefa=ABCD2345`, com QR code. Quem abre o site por esse link:
+
+- vê uma faixa com o nome da tarefa, a turma e o prazo (a turma já vem preenchida na identificação);
+- usa o botão **📤 Enviar ao professor**, que manda o vídeo para o Apps Script configurado na tarefa (ou, se a tarefa não tiver um, o de `js/config.js`), na subpasta da tarefa no Drive;
+- ao terminar o envio, a entrega é registrada no Firestore do ProfSis (`entregas_tarefas/<código>/entregas`), onde o professor vê quem entregou, abre o vídeo e lança a nota.
+
+Se o professor encerrar a tarefa no ProfSis, o botão de envio some e a faixa avisa. O código fica em `js/tarefa.js`; sem `?tarefa=` no endereço, ele não faz nada.

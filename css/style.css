@@ -254,3 +254,17 @@ kbd {
   .frame { width: 96px; }
   .frame-del { opacity: 1; }
 }
+
+/* Faixa da tarefa do ProfSis (js/tarefa.js) */
+.task-banner {
+  display: flex; gap: 10px; align-items: flex-start;
+  margin: 12px 16px 0; padding: 10px 14px;
+  background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.task-banner .task-icon { font-size: 20px; line-height: 1.2; }
+.task-banner .task-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.task-banner .task-text span { color: var(--muted); }
+.task-banner[data-tipo="ok"] { border-left-color: var(--ok); }
+.task-banner[data-tipo="aviso"] { border-left-color: #d98e04; }
+.task-banner[data-tipo="erro"], .task-banner[data-tipo="fechada"] { border-left-color: var(--danger); }
