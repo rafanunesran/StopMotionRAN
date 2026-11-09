@@ -17,7 +17,7 @@
     try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* armazenamento indisponível */ }
   }
   function norm(s) { return s.trim().replace(/\s+/g, ' '); }
-  function ownerKey(st) { return (norm(st.name) + '|' + norm(st.cls)).toLowerCase(); }
+  function ownerKey(st) { return st.user ? 'u:' + st.user : (norm(st.name) + '|' + norm(st.cls)).toLowerCase(); }
   // Nome de arquivo sem acentos/símbolos (alguns navegadores rejeitam).
   function safeName(s) {
     return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/º/g, 'o').replace(/ª/g, 'a')
@@ -85,6 +85,40 @@
   }
   function hideToast() { $('toast').hidden = true; }
 
+  // ---------- servidor (Google Apps Script na conta do professor) ----------
+  window.SMR_CONFIG = window.SMR_CONFIG || {};
+  // Lido na hora de usar: outro script pode trocar o endereço depois.
+  const serverUrl = () => String(window.SMR_CONFIG.servidorUrl || window.SMR_CONFIG.entregaUrl || '').trim();
+  const CLOUD_EVERY = 5 * 60 * 1000; // salvamento automático na nuvem
+  const UP_BATCH = 3 * 1024 * 1024;  // bytes de quadros por envio
+  const DOWN_BATCH = 12;             // quadros por download
+
+  // Chama o servidor. Erros de rede são tentados de novo; erros do servidor ("ok: false") não.
+  async function api(body, tries) {
+    let lastErr;
+    for (let attempt = 0; attempt < (tries || 3); attempt++) {
+      if (attempt) await new Promise((r) => setTimeout(r, 1500 * attempt));
+      try {
+        // text/plain evita a verificação prévia (CORS) que o Apps Script não responde.
+        const res = await fetch(serverUrl(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!data.ok) { const e = new Error(data.erro || 'erro desconhecido'); e.final = true; throw e; }
+        return data;
+      } catch (err) {
+        lastErr = err;
+        if (err.final) break;
+      }
+    }
+    if (!lastErr.final) lastErr = new Error('sem conexão com o servidor');
+    throw lastErr;
+  }
+  const errMsg = (err) => String(err && err.message ? err.message : err).replace(/\.+$/, '');
+  const accountMode = () => !!serverUrl();
+
   // ---------- estado ----------
   const state = {
     student: null,
@@ -101,6 +135,9 @@
     busyBtn: null,
     saveTimer: null,
     dragFrom: -1,
+    syncing: null,     // promessa do salvamento na nuvem em andamento
+    cloudTimer: null,
+    cloudList: new Map(), // projetos do aluno na nuvem (id -> meta)
   };
 
   // ---------- telas ----------
@@ -114,7 +151,7 @@
     if (st) {
       lsSet(LS_CURRENT, st);
       const list = lsGet(LS_STUDENTS, []).filter((s) => ownerKey(s) !== ownerKey(st));
-      list.unshift(st);
+      list.unshift({ name: st.name, cls: st.cls, school: st.school || '', user: st.user || undefined });
       lsSet(LS_STUDENTS, list.slice(0, 30));
       $('whoName').textContent = st.name;
       $('whoClass').textContent = st.cls;
@@ -133,18 +170,71 @@
     classes.forEach((c) => { const o = document.createElement('option'); o.value = c; $('classList').appendChild(o); });
     const box = $('recentList');
     box.innerHTML = '';
-    students.slice(0, 12).forEach((s) => {
+    const acc = accountMode();
+    $('accountBox').hidden = !acc;
+    $('loginForm').hidden = acc;
+    $('localHint').hidden = acc;
+    const shown = students.filter((s) => !!s.user === acc).slice(0, 12);
+    shown.forEach((s) => {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'chip';
-      b.textContent = s.name + ' · ' + s.cls;
-      b.onclick = () => { setStudent(s); goProjects(); };
+      b.textContent = acc ? s.user : s.name + ' · ' + s.cls;
+      b.title = s.name + ' · ' + s.cls;
+      b.onclick = acc
+        ? () => { showAccTab('login'); $('inUser').value = s.user; $('inPass').focus(); }
+        : () => { setStudent(s); goProjects(); };
       box.appendChild(b);
     });
-    $('recentStudents').hidden = students.length === 0;
+    $('recentStudents').hidden = shown.length === 0;
     showScreen('screenLogin');
-    $('inName').focus();
+    if (acc) { showAccTab('login'); $(shown.length ? 'inPass' : 'inUser').focus(); }
+    else $('inName').focus();
   }
+
+  // ---------- contas (entrar / criar usuário) ----------
+  function showAccTab(which) {
+    const login = which === 'login';
+    $('accLoginForm').hidden = !login;
+    $('accSignupForm').hidden = login;
+    $('tabLogin').classList.toggle('active', login);
+    $('tabSignup').classList.toggle('active', !login);
+    $('tabLogin').setAttribute('aria-selected', String(login));
+    $('tabSignup').setAttribute('aria-selected', String(!login));
+  }
+  $('tabLogin').addEventListener('click', () => { showAccTab('login'); $('inUser').focus(); });
+  $('tabSignup').addEventListener('click', () => { showAccTab('signup'); $('suName').focus(); });
+
+  async function accountSubmit(form, body) {
+    const btn = form.querySelector('button[type=submit]');
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Aguarde…';
+    try {
+      const r = await api(body);
+      const pf = r.perfil;
+      setStudent({ name: pf.nome, cls: pf.turma, school: pf.escola || '', user: pf.usuario, token: r.token });
+      form.reset();
+      goProjects();
+    } catch (err) {
+      toast(errMsg(err) + '.', null, null, 6000);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
+  }
+  $('accLoginForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    accountSubmit($('accLoginForm'), { acao: 'entrar', usuario: $('inUser').value.trim().toLowerCase(), senha: $('inPass').value });
+  });
+  $('accSignupForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    accountSubmit($('accSignupForm'), {
+      acao: 'cadastrar',
+      nome: norm($('suName').value), turma: norm($('suClass').value), escola: norm($('suSchool').value),
+      usuario: $('suUser').value.trim().toLowerCase(), senha: $('suPass').value,
+    });
+  });
 
   $('loginForm').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -158,7 +248,17 @@
   });
 
   $('btnLogout').addEventListener('click', async () => {
+    const p = state.project;
     await leaveEditor();
+    if (p && isDirty(p) && state.student && state.student.token) {
+      toast('Salvando na nuvem antes de sair…', null, null, 20000);
+      const ok = await syncProject(p).then(() => true, () => false);
+      if (!ok && !confirm('Não foi possível salvar na nuvem. Sair mesmo assim? (O projeto continua salvo neste dispositivo.)')) {
+        goProjects();
+        return;
+      }
+      hideToast();
+    }
     setStudent(null);
     renderLogin();
   });
@@ -175,13 +275,24 @@
     } catch (err) {
       toast('Não foi possível abrir o armazenamento do navegador. Verifique se não está em janela anônima.');
     }
+    if (state.syncing) {
+      // Atualiza os avisos "salvo na nuvem" quando o salvamento em segundo plano terminar.
+      const pending = state.syncing;
+      pending.then(() => { if (!$('screenProjects').hidden && !state.syncing) goProjects(); }, () => {});
+    }
+    const cloudOnly = state.student.token ? await loadCloudList(projects) : [];
+    projects = projects.concat(cloudOnly).sort((a, b) => b.updatedAt - a.updatedAt);
+    if (!state.student || $('screenProjects').hidden) return; // sessão expirou ou o aluno saiu desta tela
+    grid.innerHTML = '';
     $('emptyProjects').hidden = projects.length > 0;
     for (const p of projects) {
       const card = document.createElement('article');
       card.className = 'project-card';
       const thumb = document.createElement('div');
       thumb.className = 'thumb';
-      if (p.frames.length) {
+      if (p.cloudOnly) {
+        thumb.textContent = '☁️';
+      } else if (p.frames.length) {
         DB.getFrame(p.frames[0]).then((f) => {
           if (!f) return;
           const img = document.createElement('img');
@@ -201,6 +312,12 @@
       meta.className = 'muted small';
       meta.textContent = p.frames.length + ' quadro(s) · ' + p.fps + ' qps · ' + fmtDate(p.updatedAt);
       info.append(h, meta);
+      if (state.student.token) {
+        const tag = document.createElement('p');
+        tag.className = 'small cloud-tag';
+        tag.textContent = p.cloudOnly ? '☁ Na nuvem: abre baixando' : (isDirty(p) ? '⚠ Falta salvar na nuvem' : '☁ Salvo na nuvem');
+        info.appendChild(tag);
+      }
       const actions = document.createElement('div');
       actions.className = 'btn-row';
       const open = document.createElement('button');
@@ -214,6 +331,14 @@
       del.textContent = 'Apagar';
       del.onclick = async () => {
         if (!confirm('Apagar o projeto "' + p.title + '"? Isso não pode ser desfeito.')) return;
+        if (state.student.token && (p.cloudOnly || p.cloudSavedAt)) {
+          try {
+            await api({ acao: 'apagar', token: state.student.token, projetoId: p.id });
+          } catch (err) {
+            toast('Não foi possível apagar da nuvem: ' + errMsg(err) + '.');
+            return;
+          }
+        }
         await DB.deleteProject(p.id);
         toast('Projeto apagado.');
         goProjects();
@@ -316,6 +441,25 @@
 
   // ---------- editor ----------
   async function openProject(id) {
+    if (state.student.token) {
+      // Confere a versão mais nova na nuvem (pode ter sido mudada em outro computador).
+      try {
+        const r = await api({ acao: 'projetos', token: state.student.token }, 1);
+        state.cloudList = new Map(r.projetos.map((m) => [m.id, m]));
+      } catch (err) { /* sem conexão: usa a lista que já temos */ }
+    }
+    const remote = state.cloudList.get(id);
+    const local = await DB.getProject(id);
+    if (remote && state.student.token && (!local || (!isDirty(local) && remote.updatedAt > (local.cloudSavedAt || 0)))) {
+      try {
+        toast('Baixando o projeto da nuvem…', null, null, 120000);
+        await pullProject(remote, local);
+        hideToast();
+      } catch (err) {
+        toast('Não foi possível baixar da nuvem: ' + errMsg(err) + '.' + (local ? ' Abrindo a cópia deste dispositivo.' : ''), null, null, 6000);
+        if (!local) return;
+      }
+    }
     const p = await DB.getProject(id);
     if (!p) { toast('Projeto não encontrado.'); return; }
     state.project = p;
@@ -335,6 +479,7 @@
     state.selected = p.frames.length - 1;
     $('saveState').textContent = '';
     showSentInfo();
+    startCloudTimer();
     updateFpsLabels();
     applyStageAspect();
     renderTimeline();
@@ -346,6 +491,10 @@
     stopPlay();
     stopCamera();
     if (state.saveTimer) { clearTimeout(state.saveTimer); state.saveTimer = null; await saveProject(); }
+    stopCloudTimer();
+    const p = state.project;
+    // Salva na nuvem em segundo plano ao sair do projeto.
+    if (p && isDirty(p) && state.student && state.student.token) syncProject(p).catch(() => {});
     state.project = null;
     clearCache();
   }
@@ -374,7 +523,7 @@
     p.updatedAt = Date.now();
     try {
       await DB.putProject(p);
-      if (state.project === p) $('saveState').textContent = 'Salvo ✓';
+      if (state.project === p) { $('saveState').textContent = 'Salvo ✓'; showCloudState(); }
     } catch (err) {
       $('saveState').textContent = 'Erro ao salvar!';
       toast('Não foi possível salvar. O armazenamento do navegador pode estar cheio.');
@@ -385,6 +534,137 @@
     if (!state.project) return;
     state.project.title = $('inTitle').value.trim() || 'Sem nome';
     scheduleSave();
+  });
+
+  // ---------- salvamento na nuvem (Drive do professor) ----------
+  function isDirty(p) { return (p.updatedAt || 0) > (p.cloudSavedAt || 0); }
+
+  // Busca a lista da nuvem; devolve os projetos que ainda não estão neste dispositivo.
+  async function loadCloudList(localProjects) {
+    try {
+      const r = await api({ acao: 'projetos', token: state.student.token });
+      state.cloudList = new Map(r.projetos.map((m) => [m.id, m]));
+    } catch (err) {
+      if (/sess[aã]o/i.test(errMsg(err))) { toast('Sua sessão expirou. Entre de novo.'); setStudent(null); renderLogin(); return []; }
+      toast('Sem conexão com a nuvem agora. Mostrando os projetos deste dispositivo.', null, null, 5000);
+      return [];
+    }
+    const have = new Set(localProjects.map((p) => p.id));
+    return [...state.cloudList.values()].filter((m) => !have.has(m.id)).map((m) => Object.assign({}, m, { cloudOnly: true }));
+  }
+
+  function projectMeta(p) {
+    return { id: p.id, title: p.title, fps: p.fps, width: p.width, height: p.height, frames: p.frames.slice(),
+      createdAt: p.createdAt, updatedAt: p.updatedAt, sentAt: p.sentAt || 0 };
+  }
+
+  async function frameBlob(id) {
+    const c = state.cache.get(id);
+    if (c) return c.blob;
+    const f = await DB.getFrame(id);
+    return f ? f.blob : null;
+  }
+
+  // Envia os quadros que faltam e depois o projeto. Só um salvamento por vez.
+  function syncProject(p) {
+    if (!state.student || !state.student.token) return Promise.reject(new Error('sem conta'));
+    if (state.syncing) return state.syncing.then(() => (isDirty(p) ? syncProject(p) : undefined));
+    const token = state.student.token;
+    const run = (async () => {
+      const meta = projectMeta(p);
+      showCloudState('saving');
+      const { faltando } = await api({ acao: 'faltando', token, projetoId: p.id, ids: meta.frames });
+      let batch = [], size = 0;
+      const flush = async () => {
+        if (!batch.length) return;
+        await api({ acao: 'quadros', token, projetoId: p.id, quadros: batch });
+        batch = []; size = 0;
+      };
+      for (const id of faltando) {
+        const blob = await frameBlob(id);
+        if (!blob) continue;
+        if (size + blob.size > UP_BATCH) await flush();
+        batch.push({ id, tipo: blob.type || 'image/jpeg', dados: await blobToBase64(blob) });
+        size += blob.size;
+      }
+      await flush();
+      await api({ acao: 'salvar', token, projeto: meta });
+      // Marca como salvo sem mexer em updatedAt (o aluno pode ter mudado algo enquanto isso).
+      p.cloudSavedAt = meta.updatedAt;
+      const stored = await DB.getProject(p.id);
+      if (stored) { stored.cloudSavedAt = meta.updatedAt; await DB.putProject(stored); }
+      state.cloudList.set(p.id, meta);
+    })();
+    state.syncing = run;
+    return run.then(
+      () => { state.syncing = null; showCloudState(); },
+      (err) => { state.syncing = null; showCloudState('error', err); throw err; });
+  }
+
+  // Baixa da nuvem os quadros que faltam neste dispositivo e grava o projeto.
+  async function pullProject(remote, local) {
+    const token = state.student.token;
+    const need = [];
+    for (const id of remote.frames) if (!(await DB.getFrame(id))) need.push(id);
+    for (let i = 0; i < need.length; i += DOWN_BATCH) {
+      const r = await api({ acao: 'baixar', token, projetoId: remote.id, ids: need.slice(i, i + DOWN_BATCH) });
+      for (const q of r.quadros) {
+        const blob = await (await fetch('data:' + q.tipo + ';base64,' + q.dados)).blob();
+        await DB.putFrame({ id: q.id, projectId: remote.id, blob });
+      }
+      $('toastMsg').textContent = 'Baixando o projeto da nuvem… ' + Math.min(100, Math.round(((i + DOWN_BATCH) / need.length) * 100)) + '%';
+    }
+    const keep = new Set(remote.frames);
+    for (const fid of await DB.listFrameIds(remote.id)) if (!keep.has(fid)) await DB.deleteFrame(fid);
+    const st = state.student;
+    await DB.putProject(Object.assign({}, local || {}, {
+      id: remote.id, owner: ownerKey(st), ownerName: st.name, ownerClass: st.cls, ownerSchool: st.school || '',
+      title: remote.title, fps: remote.fps, width: remote.width, height: remote.height, frames: remote.frames.slice(),
+      createdAt: remote.createdAt, updatedAt: remote.updatedAt, cloudSavedAt: remote.updatedAt,
+      sentAt: remote.sentAt || (local && local.sentAt) || 0,
+    }));
+  }
+
+  function showCloudState(mode, err) {
+    const on = !!(state.student && state.student.token);
+    $('cloudBox').hidden = !on;
+    $('saveHint').textContent = on
+      ? 'Salva sozinho neste dispositivo e, a cada 5 minutos, na nuvem.'
+      : 'O projeto é salvo automaticamente neste dispositivo.';
+    const p = state.project;
+    if (!on || !p) return;
+    const el = $('cloudState');
+    el.className = 'small cloud-state';
+    $('btnCloudSave').disabled = mode === 'saving';
+    if (mode === 'saving') el.textContent = '☁ Salvando na nuvem…';
+    else if (mode === 'error') { el.textContent = '⚠ Não salvou na nuvem (' + errMsg(err) + '). Tento de novo em 5 min.'; el.classList.add('warn'); }
+    else if (!isDirty(p)) { el.textContent = '☁ Salvo na nuvem às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); el.classList.add('ok'); }
+    else if (!state.syncing) el.textContent = '☁ Há mudanças para salvar na nuvem.';
+  }
+
+  function startCloudTimer() {
+    stopCloudTimer();
+    showCloudState();
+    if (!state.student || !state.student.token) return;
+    const p = state.project;
+    if (p && !p.cloudSavedAt) $('cloudState').textContent = '☁ Ainda não está na nuvem.';
+    state.cloudTimer = setInterval(() => {
+      const cur = state.project;
+      if (cur && isDirty(cur) && !state.syncing) syncProject(cur).catch(() => {});
+    }, CLOUD_EVERY);
+  }
+  function stopCloudTimer() { clearInterval(state.cloudTimer); state.cloudTimer = null; }
+
+  $('btnCloudSave').addEventListener('click', async () => {
+    const p = state.project;
+    if (!p) return;
+    if (state.saveTimer) { clearTimeout(state.saveTimer); state.saveTimer = null; await saveProject(); }
+    try {
+      await syncProject(p);
+      toast('Projeto salvo na nuvem ☁');
+    } catch (err) {
+      toast('Não foi possível salvar na nuvem: ' + errMsg(err) + '.', null, null, 6000);
+    }
   });
 
   // ---------- câmera ----------
@@ -869,9 +1149,7 @@
   });
 
   // ---------- exportar vídeo ----------
-  window.SMR_CONFIG = window.SMR_CONFIG || {};
-  // Lido na hora do envio: outro script (ex.: js/tarefa.js) pode trocar o destino depois.
-  const entregaUrl = () => String(window.SMR_CONFIG.entregaUrl || '').trim();
+  const entregaUrl = serverUrl;
   const CHUNK = 4 * 1024 * 1024; // múltiplo de 256 KB, exigência do Google Drive
 
   function pickMime() {
@@ -988,27 +1266,7 @@
     return blobToDataURL(blob).then((u) => u.slice(u.indexOf(',') + 1));
   }
 
-  async function callEntrega(body) {
-    let lastErr;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      if (attempt) await new Promise((r) => setTimeout(r, 1500 * attempt));
-      try {
-        // text/plain evita a verificação prévia (CORS) que o Apps Script não responde.
-        const res = await fetch(entregaUrl(), {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(body),
-        });
-        const data = await res.json();
-        if (!data.ok) { const e = new Error(data.erro || 'erro desconhecido'); e.final = true; throw e; }
-        return data;
-      } catch (err) {
-        lastErr = err;
-        if (err.final) break;
-      }
-    }
-    throw lastErr;
-  }
+  const callEntrega = (body) => api(body);
 
   function showSentInfo() {
     const p = state.project;
@@ -1066,7 +1324,7 @@
       } }));
       toast('Trabalho entregue ao professor! ✅', null, null, 6000);
     } catch (err) {
-      const why = String(err && err.message ? err.message : err).replace(/\.+$/, '');
+      const why = errMsg(err);
       const msg = 'Não foi possível enviar: ' + why + '. Verifique a internet e tente de novo.';
       if (video) toast(msg, 'Baixar vídeo', () => download(video.blob, videoFileName(p, video.ext)), 12000);
       else toast(msg, null, null, 8000);
@@ -1106,13 +1364,23 @@
     if (document.hidden) { stopPlay(); stopCamera(); }
     else if (!state.stream) startCamera();
   });
-  window.addEventListener('beforeunload', () => { if (state.saveTimer) saveProject(); });
+  window.addEventListener('beforeunload', (e) => {
+    if (state.saveTimer) saveProject();
+    // Avisa se há mudanças que ainda não foram para a nuvem.
+    const p = state.project;
+    if (p && state.student && state.student.token && (isDirty(p) || state.syncing)) {
+      syncProject(p).catch(() => {});
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
 
   // ---------- início ----------
   loadPrefs();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   const current = lsGet(LS_CURRENT, null);
-  if (current && current.name && current.cls) { setStudent(current); goProjects(); }
+  // Com servidor configurado, só entra direto quem já fez login (tem token).
+  if (current && current.name && current.cls && (!accountMode() || current.token)) { setStudent(current); goProjects(); }
   else renderLogin();
 
   // Para testes automatizados.
@@ -1120,7 +1388,7 @@
   // API para outros scripts: trocar o destino da entrega e a tarefa (subpasta no Drive).
   window.SMR = {
     setEntrega(opts) {
-      if (opts && 'url' in opts) window.SMR_CONFIG.entregaUrl = opts.url || '';
+      if (opts && 'url' in opts) window.SMR_CONFIG.servidorUrl = opts.url || '';
       if (opts && 'tarefa' in opts) window.SMR_CONFIG.tarefa = opts.tarefa || '';
       refreshSendButton();
     },

@@ -44,7 +44,50 @@
     </section>
     <section class="card login-card">
       <h2>Olá! Quem é você?</h2>
-      <p class="muted">Seus projetos ficam salvos neste dispositivo com o seu nome.</p>
+      <!-- Com servidor configurado: contas de aluno (projetos salvos no Drive do professor). -->
+      <div id="accountBox" hidden>
+        <p class="muted">Entre com seu usuário para continuar seus projetos em qualquer computador.</p>
+        <div class="tabs" role="tablist">
+          <button class="tab active" id="tabLogin" type="button" role="tab" aria-selected="true">Entrar</button>
+          <button class="tab" id="tabSignup" type="button" role="tab" aria-selected="false">Criar usuário</button>
+        </div>
+        <form id="accLoginForm" autocomplete="on">
+          <label class="field">
+            <span>Usuário</span>
+            <input id="inUser" name="username" type="text" required maxlength="30" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" placeholder="Ex.: ana.souza">
+          </label>
+          <label class="field">
+            <span>Senha</span>
+            <input id="inPass" name="password" type="password" required maxlength="60" autocomplete="current-password">
+          </label>
+          <button class="btn primary big" type="submit">Entrar</button>
+          <p class="muted small">Esqueceu a senha? Peça ao professor uma senha nova.</p>
+        </form>
+        <form id="accSignupForm" autocomplete="on" hidden>
+          <label class="field">
+            <span>Seu nome</span>
+            <input id="suName" name="name" type="text" required maxlength="60" placeholder="Ex.: Ana Souza" autocomplete="name">
+          </label>
+          <label class="field">
+            <span>Turma</span>
+            <input id="suClass" name="class" type="text" required maxlength="30" placeholder="Ex.: 6º A" list="classList">
+          </label>
+          <label class="field">
+            <span>Escola <small class="muted">(opcional)</small></span>
+            <input id="suSchool" name="school" type="text" maxlength="80" placeholder="Nome da escola">
+          </label>
+          <label class="field">
+            <span>Escolha um usuário <small class="muted">(sem espaço nem acento)</small></span>
+            <input id="suUser" name="username" type="text" required minlength="3" maxlength="30" pattern="[A-Za-z0-9._\-]{3,30}" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" placeholder="Ex.: ana.souza">
+          </label>
+          <label class="field">
+            <span>Crie uma senha <small class="muted">(mínimo 4 caracteres)</small></span>
+            <input id="suPass" name="password" type="password" required minlength="4" maxlength="60" autocomplete="new-password">
+          </label>
+          <button class="btn primary big" type="submit">Criar e entrar</button>
+        </form>
+      </div>
+      <p class="muted" id="localHint">Seus projetos ficam salvos neste dispositivo com o seu nome.</p>
       <form id="loginForm" autocomplete="on">
         <label class="field">
           <span>Seu nome</span>
@@ -164,7 +207,11 @@
           </div>
           <div class="progress" id="exportProgress" hidden><div class="bar" id="exportBar"></div></div>
           <p class="small sent-info" id="sentInfo" hidden></p>
-          <p class="muted small">O projeto é salvo automaticamente neste dispositivo.</p>
+          <div class="cloud-box" id="cloudBox" hidden>
+            <p class="small cloud-state" id="cloudState"></p>
+            <button class="btn ghost small" id="btnCloudSave" type="button">☁ Salvar na nuvem agora</button>
+          </div>
+          <p class="muted small" id="saveHint">O projeto é salvo automaticamente neste dispositivo.</p>
         </div>
 
       </aside>
