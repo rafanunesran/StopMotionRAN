@@ -583,3 +583,33 @@ body.cam-fs .toast { z-index: 95; bottom: calc(max(18px, env(safe-area-inset-bot
   body.cam-fs .btn.capture .dot { width: 30px; height: 30px; }
   body.cam-fs .capture-bar .btn.ghost { font-size: .8rem; padding: 6px 8px; }
 }
+
+/* ---------- QR code ---------- */
+.topbar .brand { margin-right: auto; }
+.qr-open svg { flex: 0 0 auto; }
+.qr-dialog {
+  border: 0; padding: 28px 24px 22px; border-radius: 24px; width: min(380px, calc(100vw - 32px));
+  background: var(--surface); color: var(--text); text-align: center; box-shadow: var(--shadow-lg);
+}
+.qr-dialog[open] { animation: toast-in-dialog .22s ease both; }
+@keyframes toast-in-dialog { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+.qr-dialog::backdrop { background: rgba(17, 20, 28, .6); backdrop-filter: blur(3px); }
+.qr-dialog h2 { font-size: 1.4rem; }
+.qr-close-form { position: absolute; top: 10px; right: 10px; margin: 0; }
+.qr-close {
+  width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer; font-size: 24px; line-height: 1;
+  background: var(--surface-2); color: var(--text);
+}
+.qr-close:hover { background: var(--surface-3); }
+.qr-box {
+  margin: 8px auto 12px; width: min(260px, 70vw); aspect-ratio: 1; padding: 10px;
+  background: #fff; border-radius: 18px; border: 4px solid var(--sun);
+}
+.qr-box svg { width: 100%; height: 100%; display: block; }
+.qr-url { font-weight: 800; font-size: 1.05rem; word-break: break-all; margin-bottom: 14px; }
+.qr-actions { justify-content: center; }
+.qr-actions .btn { flex: 1; }
+@media (max-width: 600px) {
+  .qr-open span { display: none; }
+  .qr-open { padding: 6px 10px; }
+}

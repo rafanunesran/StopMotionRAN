@@ -124,4 +124,41 @@
       if (tlEl) new MutationObserver(function () { if (fsOn) updateCount(); }).observe(tlEl, { childList: true });
     }
   }
+
+  // ---------- QR code para compartilhar o site ----------
+  var qrDialog = document.getElementById('qrDialog');
+  function siteUrl() { return location.origin + location.pathname.replace(/index\.html$/, ''); }
+  function openQr() {
+    if (!qrDialog) return;
+    var url = siteUrl();
+    var box = document.getElementById('qrBox');
+    box.innerHTML = '';
+    if (typeof qrcode === 'function') {
+      var qr = qrcode(0, 'M');
+      qr.addData(url);
+      qr.make();
+      box.innerHTML = qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true, alt: 'QR code do site', title: url });
+    } else {
+      box.textContent = 'Não foi possível gerar o QR code. Use o link abaixo.';
+    }
+    document.getElementById('qrUrl').textContent = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    document.getElementById('qrShare').hidden = !navigator.share;
+    if (qrDialog.showModal) qrDialog.showModal(); else qrDialog.setAttribute('open', '');
+  }
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('[data-open-qr]')) { openQr(); return; }
+    // Clique fora da caixa fecha a janela.
+    if (e.target === qrDialog) qrDialog.close();
+  });
+  var copyBtn = document.getElementById('qrCopy');
+  if (copyBtn) copyBtn.addEventListener('click', function () {
+    var url = siteUrl();
+    var done = function () { copyBtn.textContent = 'Link copiado ✓'; setTimeout(function () { copyBtn.textContent = 'Copiar link'; }, 2000); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, function () { prompt('Copie o link:', url); });
+    else prompt('Copie o link:', url);
+  });
+  var shareBtn = document.getElementById('qrShare');
+  if (shareBtn) shareBtn.addEventListener('click', function () {
+    navigator.share({ title: 'StopMotion RAN', text: 'Vamos animar! Crie seu stop motion aqui:', url: siteUrl() }).catch(function () {});
+  });
 })();

@@ -19,6 +19,10 @@
       <img src="favicon.svg" alt="" width="28" height="28">
       <span>StopMotion RAN</span>
     </div>
+    <button class="btn ghost small qr-open" id="btnQr" type="button" data-open-qr title="Mostrar QR code do site para os colegas" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2zM16 16h2v2h-2z" fill="currentColor"/></svg>
+      <span>QR code</span>
+    </button>
     <div class="who" id="whoBox" hidden>
       <span class="who-name" id="whoName"></span>
       <span class="who-class" id="whoClass"></span>
@@ -220,6 +224,20 @@
 
   </main>
 
+  <dialog class="qr-dialog" id="qrDialog" aria-labelledby="qrTitle">
+    <form method="dialog" class="qr-close-form">
+      <button class="qr-close" type="submit" aria-label="Fechar">×</button>
+    </form>
+    <h2 id="qrTitle">Abra no seu celular 📱</h2>
+    <p class="muted">Aponte a câmera do celular para o código e o StopMotion RAN abre na hora.</p>
+    <div class="qr-box" id="qrBox"></div>
+    <p class="qr-url" id="qrUrl"></p>
+    <div class="btn-row qr-actions">
+      <button class="btn ghost" id="qrCopy" type="button">Copiar link</button>
+      <button class="btn primary" id="qrShare" type="button" hidden>Compartilhar</button>
+    </div>
+  </dialog>
+
   <div class="toast" id="toast" role="status" aria-live="polite" hidden>
     <span id="toastMsg"></span>
     <button class="btn ghost small" id="toastAction" type="button" hidden></button>
@@ -228,6 +246,7 @@
   <script src="js/config.js"></script>
   <script src="js/db.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/vendor/qrcode.js"></script>
   <script src="js/ui.js"></script>
 </body>
 </html>
