@@ -98,6 +98,7 @@
     capturing: false,
     lastDeleted: null,
     exporting: false,
+    busyBtn: null,
     saveTimer: null,
     dragFrom: -1,
   };
@@ -333,6 +334,7 @@
     p.frames = valid;
     state.selected = p.frames.length - 1;
     $('saveState').textContent = '';
+    showSentInfo();
     updateFpsLabels();
     applyStageAspect();
     renderTimeline();
@@ -732,7 +734,8 @@
     $('btnDup').disabled = !has;
     $('btnDel').disabled = !has;
     $('btnPlay').disabled = p.frames.length === 0;
-    $('btnExport').disabled = p.frames.length === 0;
+    $('btnExport').disabled = p.frames.length === 0 || state.exporting;
+    $('btnSend').disabled = p.frames.length === 0 || state.exporting;
     $('btnExportProject').disabled = p.frames.length === 0;
   }
 
@@ -863,6 +866,11 @@
   });
 
   // ---------- exportar vídeo ----------
+  window.SMR_CONFIG = window.SMR_CONFIG || {};
+  // Lido na hora do envio: outro script (ex.: js/tarefa.js) pode trocar o destino depois.
+  const entregaUrl = () => String(window.SMR_CONFIG.entregaUrl || '').trim();
+  const CHUNK = 4 * 1024 * 1024; // múltiplo de 256 KB, exigência do Google Drive
+
   function pickMime() {
     if (!window.MediaRecorder) return null;
     const types = [
@@ -875,22 +883,28 @@
     return types.find((t) => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
   }
 
-  async function exportVideo() {
-    const p = state.project;
-    if (!p || !p.frames.length || state.exporting) return;
-    const mime = pickMime();
-    const canvasEl = document.createElement('canvas');
-    if (mime === null || !canvasEl.captureStream) {
-      toast('Este navegador não consegue gravar vídeo. Tente o Google Chrome, Edge ou Firefox.');
-      return;
-    }
-    stopPlay();
-    state.exporting = true;
-    $('btnExport').disabled = true;
-    $('btnExport').textContent = 'Gerando vídeo…';
-    $('exportProgress').hidden = false;
-    $('exportBar').style.width = '0%';
+  function videoFileName(p, ext) {
+    return safeName(p.title + ' - ' + p.ownerName + ' ' + p.ownerClass) + '.' + ext;
+  }
 
+  // Liga/desliga os botões e a barra de progresso enquanto gera ou envia.
+  function setBusy(busy, label) {
+    const p = state.project;
+    state.exporting = busy;
+    const none = !p || !p.frames.length;
+    $('btnExport').disabled = busy || none;
+    $('btnSend').disabled = busy || none;
+    $('btnExport').textContent = '⬇ Baixar vídeo';
+    $('btnSend').textContent = '📤 Enviar ao professor';
+    if (busy && label) state.busyBtn.textContent = label;
+    if (busy) { $('exportProgress').hidden = false; $('exportBar').style.width = '0%'; }
+    else setTimeout(() => { if (!state.exporting) $('exportProgress').hidden = true; }, 800);
+  }
+  function setProgress(frac) { $('exportBar').style.width = Math.round(frac * 100) + '%'; }
+
+  // Grava os quadros num vídeo e devolve { blob, ext }.
+  async function renderVideo(p, mime) {
+    const canvasEl = document.createElement('canvas');
     // Dimensões pares (exigência de alguns codificadores).
     const w = p.width - (p.width % 2), h = p.height - (p.height % 2);
     canvasEl.width = w; canvasEl.height = h;
@@ -917,7 +931,7 @@
       for (let i = 0; i < total; i++) {
         const f = state.cache.get(p.frames[i]);
         ctx.drawImage(f.img, 0, 0, w, h);
-        $('exportBar').style.width = Math.round(((i + 1) / total) * 100) + '%';
+        setProgress((i + 1) / total);
         // Mantém o tempo exato com base no relógio, redesenhando para gerar quadros no stream.
         const until = t0 + (i + 1) * frameMs;
         while (performance.now() < until) {
@@ -928,22 +942,143 @@
       await sleep(150);
       rec.stop();
       await stopped;
-      const type = (rec.mimeType || mime || 'video/webm').split(';')[0];
-      const ext = type.includes('mp4') ? 'mp4' : 'webm';
-      const blob = new Blob(chunks, { type });
-      download(blob, safeName(p.title + ' - ' + p.ownerName + ' ' + p.ownerClass) + '.' + ext);
+    } finally {
+      stream.getTracks().forEach((t) => t.stop());
+    }
+    const type = (rec.mimeType || mime || 'video/webm').split(';')[0];
+    const ext = type.includes('mp4') ? 'mp4' : 'webm';
+    return { blob: new Blob(chunks, { type }), ext };
+  }
+
+  // Confere se o navegador grava vídeo; devolve o tipo ou null.
+  function checkRecorder() {
+    const mime = pickMime();
+    if (mime === null || !document.createElement('canvas').captureStream) {
+      toast('Este navegador não consegue gravar vídeo. Tente o Google Chrome, Edge ou Firefox.');
+      return null;
+    }
+    return mime;
+  }
+
+  async function exportVideo() {
+    const p = state.project;
+    if (!p || !p.frames.length || state.exporting) return;
+    const mime = checkRecorder();
+    if (mime === null) return;
+    stopPlay();
+    state.busyBtn = $('btnExport');
+    setBusy(true, 'Gerando vídeo…');
+    try {
+      const { blob, ext } = await renderVideo(p, mime);
+      download(blob, videoFileName(p, ext));
       toast('Vídeo pronto! Verifique a pasta de downloads.');
     } catch (err) {
       toast('Não foi possível gerar o vídeo: ' + (err && err.message ? err.message : err));
     } finally {
-      stream.getTracks().forEach((t) => t.stop());
-      state.exporting = false;
-      $('btnExport').textContent = '⬇ Baixar vídeo';
-      $('btnExport').disabled = !p.frames.length;
-      setTimeout(() => { $('exportProgress').hidden = true; }, 800);
+      setBusy(false);
     }
   }
   $('btnExport').addEventListener('click', exportVideo);
+
+  // ---------- enviar ao professor (Google Drive via Apps Script) ----------
+  function blobToBase64(blob) {
+    return blobToDataURL(blob).then((u) => u.slice(u.indexOf(',') + 1));
+  }
+
+  async function callEntrega(body) {
+    let lastErr;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt) await new Promise((r) => setTimeout(r, 1500 * attempt));
+      try {
+        // text/plain evita a verificação prévia (CORS) que o Apps Script não responde.
+        const res = await fetch(entregaUrl(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!data.ok) { const e = new Error(data.erro || 'erro desconhecido'); e.final = true; throw e; }
+        return data;
+      } catch (err) {
+        lastErr = err;
+        if (err.final) break;
+      }
+    }
+    throw lastErr;
+  }
+
+  function showSentInfo() {
+    const p = state.project;
+    const el = $('sentInfo');
+    if (p && p.sentAt) {
+      el.textContent = '✅ Enviado ao professor em ' + fmtDate(p.sentAt);
+      el.hidden = false;
+    } else el.hidden = true;
+  }
+
+  async function sendToTeacher() {
+    const p = state.project;
+    if (!entregaUrl() || !p || !p.frames.length || state.exporting) return;
+    const again = p.sentAt ? '\n\nVocê já enviou este projeto em ' + fmtDate(p.sentAt) + '. Enviar de novo?' : '';
+    if (!window.confirm('Enviar "' + p.title + '" para o professor?\n\nAluno: ' + p.ownerName + '\nTurma: ' + p.ownerClass + again)) return;
+    const mime = checkRecorder();
+    if (mime === null) return;
+    stopPlay();
+    state.busyBtn = $('btnSend');
+    setBusy(true, 'Gerando vídeo…');
+    let video = null;
+    try {
+      video = await renderVideo(p, mime);
+      const { blob } = video;
+      $('btnSend').textContent = 'Enviando… 0%';
+      setProgress(0);
+      const start = await callEntrega({
+        acao: 'iniciar',
+        aluno: p.ownerName, turma: p.ownerClass, escola: p.ownerSchool || '', titulo: p.title,
+        quadros: p.frames.length, fps: p.fps,
+        tarefa: String(window.SMR_CONFIG.tarefa || ''),
+        tipo: blob.type, tamanho: blob.size,
+      });
+      let done = null;
+      for (let off = 0; off < blob.size; off += CHUNK) {
+        const part = blob.slice(off, Math.min(off + CHUNK, blob.size));
+        const r = await callEntrega({
+          acao: 'parte', sessao: start.sessao, inicio: off, total: blob.size,
+          dados: await blobToBase64(part),
+        });
+        if (r.completo) done = r;
+        const frac = Math.min(1, (off + part.size) / blob.size);
+        setProgress(frac);
+        $('btnSend').textContent = 'Enviando… ' + Math.round(frac * 100) + '%';
+      }
+      if (!done) throw new Error('o Google Drive não confirmou o recebimento');
+      p.sentAt = Date.now();
+      await saveProject();
+      showSentInfo();
+      // Aviso para outros scripts (ex.: registrar a entrega de uma tarefa).
+      window.dispatchEvent(new CustomEvent('smr:entregue', { detail: {
+        projeto: p.title, aluno: p.ownerName, turma: p.ownerClass,
+        arquivoId: done.arquivoId || '', arquivoUrl: done.arquivoUrl || '', nome: done.nome || '',
+        tarefa: String(window.SMR_CONFIG.tarefa || ''), em: p.sentAt,
+      } }));
+      toast('Trabalho entregue ao professor! ✅', null, null, 6000);
+    } catch (err) {
+      const why = String(err && err.message ? err.message : err).replace(/\.+$/, '');
+      const msg = 'Não foi possível enviar: ' + why + '. Verifique a internet e tente de novo.';
+      if (video) toast(msg, 'Baixar vídeo', () => download(video.blob, videoFileName(p, video.ext)), 12000);
+      else toast(msg, null, null, 8000);
+    } finally {
+      setBusy(false);
+    }
+  }
+  $('btnSend').addEventListener('click', sendToTeacher);
+  function refreshSendButton() {
+    const on = !!entregaUrl();
+    $('btnSend').hidden = !on;
+    $('btnExport').classList.toggle('primary', !on);
+    $('btnExport').classList.toggle('ghost', on);
+  }
+  refreshSendButton();
 
   // ---------- teclado ----------
   document.addEventListener('keydown', (e) => {
@@ -979,4 +1114,12 @@
 
   // Para testes automatizados.
   window.__smr = { state };
+  // API para outros scripts: trocar o destino da entrega e a tarefa (subpasta no Drive).
+  window.SMR = {
+    setEntrega(opts) {
+      if (opts && 'url' in opts) window.SMR_CONFIG.entregaUrl = opts.url || '';
+      if (opts && 'tarefa' in opts) window.SMR_CONFIG.tarefa = opts.tarefa || '';
+      refreshSendButton();
+    },
+  };
 })();

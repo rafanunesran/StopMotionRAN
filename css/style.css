@@ -194,6 +194,7 @@ input[type="checkbox"] { accent-color: var(--primary); width: 18px; height: 18px
 
 .progress { height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin-top: 10px; border: 1px solid var(--border); }
 .progress .bar { height: 100%; width: 0; background: var(--primary); transition: width .2s; }
+.sent-info { color: var(--ok); font-weight: 600; margin: 10px 0 0; }
 .help ul { margin: 0; padding-left: 18px; }
 kbd {
   font: inherit; font-size: .8rem; padding: 1px 6px; border-radius: 5px;
