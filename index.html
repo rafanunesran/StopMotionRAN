@@ -107,6 +107,11 @@
           <div id="flash" class="flash"></div>
           <div id="stageMsg" class="stage-msg" hidden></div>
           <div class="mode-tag" id="modeTag">Câmera</div>
+          <button class="stage-btn" id="btnFullscreen" type="button" title="Tela cheia (F)" aria-label="Tela cheia" aria-pressed="false">
+            <svg class="ico-enter" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="ico-exit" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="fs-count" id="fsCount" aria-hidden="true"></div>
         </div>
 
         <div class="capture-bar">
@@ -203,6 +208,7 @@
           <ul class="small">
             <li><kbd>Espaço</kbd> tirar foto</li>
             <li><kbd>P</kbd> prévia / parar</li>
+            <li><kbd>F</kbd> câmera em tela cheia</li>
             <li><kbd>←</kbd> <kbd>→</kbd> escolher quadro</li>
             <li><kbd>Delete</kbd> apagar quadro</li>
             <li><kbd>D</kbd> duplicar quadro</li>

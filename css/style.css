@@ -526,3 +526,60 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+/* ---------- câmera em tela cheia ---------- */
+.stage-btn {
+  position: absolute; top: 10px; right: 10px; z-index: 3;
+  width: 44px; height: 44px; border-radius: 12px; border: 0; cursor: pointer;
+  display: grid; place-items: center; color: #fff;
+  background: rgba(0,0,0,.5); backdrop-filter: blur(6px);
+  transition: background .15s, transform .12s;
+}
+.stage-btn:hover { background: rgba(0,0,0,.72); }
+.stage-btn:active { transform: scale(.94); }
+.stage-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.stage-btn .ico-exit { display: none; }
+.fs-count { display: none; }
+
+body.cam-fs { overflow: hidden; }
+body.cam-fs .screen { animation: none; transform: none; }
+body.cam-fs::before {
+  content: ""; position: fixed; inset: 0; background: #000; z-index: 90;
+}
+body.cam-fs .stage {
+  position: fixed; z-index: 91; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  max-height: none; max-width: none; margin: 0; border-radius: 0; box-shadow: none;
+}
+body.cam-fs .stage-btn { top: max(14px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); }
+body.cam-fs .stage-btn .ico-enter { display: none; }
+body.cam-fs .stage-btn .ico-exit { display: block; }
+body.cam-fs .mode-tag { top: max(16px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); }
+body.cam-fs .fs-count {
+  display: block; position: absolute; z-index: 2; pointer-events: none;
+  top: max(16px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+  padding: 4px 12px; border-radius: 999px; background: rgba(0,0,0,.55); color: #fff;
+  font-size: .85rem; font-weight: 800; backdrop-filter: blur(6px);
+}
+body.cam-fs .capture-bar {
+  position: fixed; z-index: 92; left: 50%; right: auto; transform: translateX(-50%);
+  bottom: max(18px, env(safe-area-inset-bottom)); margin: 0; width: auto; flex-wrap: nowrap;
+  background: rgba(20, 24, 34, .72); border-color: rgba(255,255,255,.12); backdrop-filter: blur(12px);
+  box-shadow: 0 12px 32px -8px rgba(0,0,0,.6);
+}
+body.cam-fs .capture-bar .btn.ghost { color: #fff; }
+body.cam-fs .capture-bar .btn.ghost:hover { background: rgba(255,255,255,.12); border-color: transparent; }
+body.cam-fs .toast { z-index: 95; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 92px); }
+@media (max-width: 600px) {
+  body.cam-fs .capture-bar { left: 12px; right: 12px; transform: none; }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  /* celular deitado: botões na lateral direita para não cobrir a cena */
+  body.cam-fs .capture-bar {
+    left: auto; right: max(12px, env(safe-area-inset-right)); top: 50%; bottom: auto;
+    transform: translateY(-50%); flex-direction: column; border-radius: 28px; padding: 8px;
+  }
+  body.cam-fs .btn.capture { min-width: 0; width: 76px; height: 76px; padding: 0; border-radius: 50%; flex: 0 0 auto; }
+  body.cam-fs .btn.capture span:not(.dot) { display: none; }
+  body.cam-fs .btn.capture .dot { width: 30px; height: 30px; }
+  body.cam-fs .capture-bar .btn.ghost { font-size: .8rem; padding: 6px 8px; }
+}
