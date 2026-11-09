@@ -10,9 +10,6 @@
     if (target) target.click();
   });
 
-  // No celular, o painel "Câmera e ajudas" começa fechado para a tela não ficar longa demais.
-  var panel = document.getElementById('panelCamera');
-  if (panel && window.matchMedia('(max-width: 600px)').matches) panel.open = false;
 
   // Mantém o quadro selecionado visível na película.
   var tl = document.getElementById('timeline');
@@ -82,19 +79,22 @@
       if (req && !document.fullscreenElement && !document.webkitFullscreenElement) {
         try { var pr = req.call(el, { navigationUI: 'hide' }); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
       }
-      try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(function () {}); } catch (e) {}
     } else {
       stage.style.width = ''; stage.style.height = '';
       var ex = document.exitFullscreen || document.webkitExitFullscreen;
       if ((document.fullscreenElement || document.webkitFullscreenElement) && ex) {
         try { var pe = ex.call(document); if (pe && pe.catch) pe.catch(function () {}); } catch (e) {}
       }
-      try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
     }
   }
   if (stage && fsBtn) {
     fsBtn.addEventListener('click', function () { setFs(!fsOn); fsBtn.blur(); });
     window.addEventListener('resize', fitStage);
+    // Ao girar o celular, a tela cheia acompanha a nova orientação (alguns aparelhos
+    // só informam o novo tamanho um pouco depois do giro).
+    var refit = function () { fitStage(); setTimeout(fitStage, 150); setTimeout(fitStage, 500); };
+    window.addEventListener('orientationchange', refit);
+    if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', refit);
     if (video) video.addEventListener('loadedmetadata', fitStage);
     // Saiu da tela cheia do navegador (Esc, gesto de voltar) → sai do modo também.
     ['fullscreenchange', 'webkitfullscreenchange'].forEach(function (ev) {
@@ -108,8 +108,10 @@
       var tag = (e.target.tagName || '').toLowerCase();
       if (tag === 'input' && !/^(checkbox|range)$/.test(e.target.type)) return;
       if (tag === 'select' || tag === 'textarea') return;
-      if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); setFs(!fsOn); }
-      else if (e.key === 'Escape' && fsOn) setFs(false);
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === 'f' || e.key === 'F') { e.preventDefault(); setFs(!fsOn); }
+      else if (e.key === 'c' || e.key === 'C') { e.preventDefault(); openSettings(); }
+      else if (e.key === 'Escape' && fsOn && !document.querySelector('dialog[open]')) setFs(false);
     });
     // Sai da tela cheia ao fechar o editor.
     if ('MutationObserver' in window) {
@@ -147,8 +149,9 @@
   }
   document.addEventListener('click', function (e) {
     if (e.target.closest('[data-open-qr]')) { openQr(); return; }
+    if (e.target.closest('[data-open-settings]')) { openSettings(); return; }
     // Clique fora da caixa fecha a janela.
-    if (e.target === qrDialog) qrDialog.close();
+    if (e.target === qrDialog || e.target === settingsDialog) e.target.close();
   });
   var copyBtn = document.getElementById('qrCopy');
   if (copyBtn) copyBtn.addEventListener('click', function () {
@@ -161,4 +164,17 @@
   if (shareBtn) shareBtn.addEventListener('click', function () {
     navigator.share({ title: 'StopMotion RAN', text: 'Vamos animar! Crie seu stop motion aqui:', url: siteUrl() }).catch(function () {});
   });
+
+  // ---------- Configurações (engrenagem) ----------
+  var settingsDialog = document.getElementById('settingsDialog');
+  function openSettings() {
+    if (!settingsDialog || settingsDialog.open) return;
+    paintAll();
+    if (settingsDialog.showModal) settingsDialog.showModal(); else settingsDialog.setAttribute('open', '');
+  }
+  // Com uma janela aberta, as teclas (ex.: espaço num interruptor) não devem tirar foto.
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') return;
+    if ((settingsDialog && settingsDialog.open) || (qrDialog && qrDialog.open)) e.stopPropagation();
+  }, true);
 })();

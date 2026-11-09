@@ -111,19 +111,26 @@
           <div id="flash" class="flash"></div>
           <div id="stageMsg" class="stage-msg" hidden></div>
           <div class="mode-tag" id="modeTag">Câmera</div>
-          <button class="stage-btn" id="btnFullscreen" type="button" title="Tela cheia (F)" aria-label="Tela cheia" aria-pressed="false">
-            <svg class="ico-enter" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <svg class="ico-exit" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
+          <div class="stage-tools">
+            <button class="stage-btn" id="btnSettings" type="button" data-open-settings title="Configurações (C)" aria-label="Configurações" aria-haspopup="dialog">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="stage-btn" id="btnFullscreen" type="button" title="Tela cheia (F)" aria-label="Tela cheia" aria-pressed="false">
+              <svg class="ico-enter" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg class="ico-exit" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <div class="stage-controls" role="group" aria-label="Ver câmera ou prévia">
+            <button class="stage-pill" id="btnLive" type="button" title="Voltar para a câmera">📷 Câmera</button>
+            <button class="stage-pill" id="btnPlay" type="button" title="Ver prévia (P)">▶ Prévia</button>
+          </div>
           <div class="fs-count" id="fsCount" aria-hidden="true"></div>
         </div>
 
         <div class="capture-bar">
-          <button class="btn ghost" id="btnLive" type="button" title="Voltar para a câmera">📷 Câmera</button>
           <button class="btn capture" id="btnCapture" type="button" title="Tirar foto (barra de espaço)">
             <span class="dot"></span><span>Fotografar</span>
           </button>
-          <button class="btn ghost" id="btnPlay" type="button" title="Ver prévia (P)">▶ Prévia</button>
         </div>
 
         <section class="timeline-wrap">
@@ -133,56 +140,9 @@
           </div>
           <ol class="timeline" id="timeline"></ol>
         </section>
-        <details class="panel" id="panelCamera" open>
-          <summary data-icon="🎥">Câmera e ajudas</summary>
-          <div class="panel-grid">
-            <label class="field inline">
-              <span>Câmera</span>
-              <select id="selCamera"></select>
-            </label>
-            <label class="toggle"><input type="checkbox" id="chkMirror"> Espelhar imagem</label>
-            <label class="toggle"><input type="checkbox" id="chkGrid"> Grade (regra dos terços)</label>
-            <label class="toggle"><input type="checkbox" id="chkOnion" checked> Papel de cebola</label>
-            <label class="field inline">
-              <span>Transparência</span>
-              <input type="range" id="rngOnion" min="10" max="80" value="35">
-            </label>
-            <label class="field inline">
-              <span>Quadros anteriores</span>
-              <select id="selOnionCount">
-                <option value="1" selected>1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-              </select>
-            </label>
-            <label class="field inline">
-              <span>Temporizador</span>
-              <select id="selTimer">
-                <option value="0" selected>Desligado</option>
-                <option value="3">3 segundos</option>
-                <option value="5">5 segundos</option>
-                <option value="10">10 segundos</option>
-              </select>
-            </label>
-            <label class="btn ghost small" title="Adicionar imagens do computador como quadros">
-              Adicionar imagens
-              <input id="inAddImages" type="file" accept="image/*" multiple hidden>
-            </label>
-          </div>
-        </details>
       </section>
 
       <aside class="side">
-        <div class="panel">
-          <h2 data-icon="⏱️">Velocidade</h2>
-          <label class="field">
-            <span><strong id="fpsLabel">8</strong> quadros por segundo</span>
-            <input type="range" id="rngFps" min="1" max="24" value="8">
-          </label>
-          <p class="muted small" id="durationLabel">Duração: 0,0 s</p>
-          <label class="toggle"><input type="checkbox" id="chkLoop" checked> Repetir prévia</label>
-        </div>
-
         <div class="panel">
           <h2 data-icon="🖼️">Quadro selecionado</h2>
           <p class="muted small" id="selInfo">Nenhum quadro.</p>
@@ -207,22 +167,83 @@
           <p class="muted small">O projeto é salvo automaticamente neste dispositivo.</p>
         </div>
 
-        <details class="panel help">
-          <summary data-icon="⌨️">Atalhos de teclado</summary>
-          <ul class="small">
-            <li><kbd>Espaço</kbd> tirar foto</li>
-            <li><kbd>P</kbd> prévia / parar</li>
-            <li><kbd>F</kbd> câmera em tela cheia</li>
-            <li><kbd>←</kbd> <kbd>→</kbd> escolher quadro</li>
-            <li><kbd>Delete</kbd> apagar quadro</li>
-            <li><kbd>D</kbd> duplicar quadro</li>
-            <li><kbd>Ctrl</kbd>+<kbd>Z</kbd> desfazer apagar</li>
-          </ul>
-        </details>
       </aside>
     </div>
 
   </main>
+
+  <dialog class="sheet" id="settingsDialog" aria-labelledby="settingsTitle">
+    <div class="sheet-head">
+      <h2 id="settingsTitle">⚙️ Configurações</h2>
+      <form method="dialog"><button class="qr-close" type="submit" aria-label="Fechar">×</button></form>
+    </div>
+    <div class="sheet-body">
+      <section class="sheet-sec">
+        <h3>🎥 Câmera</h3>
+        <label class="field inline">
+          <span>Câmera</span>
+          <select id="selCamera"></select>
+        </label>
+        <label class="toggle"><input type="checkbox" id="chkMirror"> Espelhar imagem</label>
+        <label class="toggle"><input type="checkbox" id="chkGrid"> Grade (regra dos terços)</label>
+      </section>
+      <section class="sheet-sec">
+        <h3>🧅 Papel de cebola</h3>
+        <p class="muted small">Mostra a foto anterior transparente por cima da câmera, para você saber quanto mexer.</p>
+        <label class="toggle"><input type="checkbox" id="chkOnion" checked> Mostrar foto anterior</label>
+        <label class="field inline">
+          <span>Transparência</span>
+          <input type="range" id="rngOnion" min="10" max="80" value="35">
+        </label>
+        <label class="field inline">
+          <span>Quadros anteriores</span>
+          <select id="selOnionCount">
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+          </select>
+        </label>
+      </section>
+      <section class="sheet-sec">
+        <h3>⏱️ Velocidade da prévia</h3>
+        <label class="field">
+          <span><strong id="fpsLabel">8</strong> quadros por segundo</span>
+          <input type="range" id="rngFps" min="1" max="24" value="8">
+        </label>
+        <p class="muted small" id="durationLabel">Duração: 0,0 s</p>
+        <label class="toggle"><input type="checkbox" id="chkLoop" checked> Repetir prévia</label>
+      </section>
+      <section class="sheet-sec">
+        <h3>📸 Fotos</h3>
+        <label class="field inline">
+          <span>Temporizador</span>
+          <select id="selTimer">
+            <option value="0" selected>Desligado</option>
+            <option value="3">3 segundos</option>
+            <option value="5">5 segundos</option>
+            <option value="10">10 segundos</option>
+          </select>
+        </label>
+        <label class="btn ghost small" title="Adicionar imagens do computador como quadros">
+          Adicionar imagens
+          <input id="inAddImages" type="file" accept="image/*" multiple hidden>
+        </label>
+      </section>
+      <details class="sheet-sec help">
+        <summary>⌨️ Atalhos de teclado</summary>
+        <ul class="small">
+          <li><kbd>Espaço</kbd> tirar foto</li>
+          <li><kbd>P</kbd> prévia / parar</li>
+          <li><kbd>F</kbd> câmera em tela cheia</li>
+          <li><kbd>C</kbd> configurações</li>
+          <li><kbd>←</kbd> <kbd>→</kbd> escolher quadro</li>
+          <li><kbd>Delete</kbd> apagar quadro</li>
+          <li><kbd>D</kbd> duplicar quadro</li>
+          <li><kbd>Ctrl</kbd>+<kbd>Z</kbd> desfazer apagar</li>
+        </ul>
+      </details>
+    </div>
+  </dialog>
 
   <dialog class="qr-dialog" id="qrDialog" aria-labelledby="qrTitle">
     <form method="dialog" class="qr-close-form">

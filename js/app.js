@@ -465,6 +465,9 @@
   }
 
   // A proporção do palco é a do projeto (definida na 1ª foto) ou a da câmera.
+  // Ao girar o celular a câmera troca de proporção: acompanha.
+  $('video').addEventListener('resize', () => applyStageAspect());
+
   function applyStageAspect() {
     const p = state.project;
     const v = $('video');
