@@ -5,7 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>StopMotion RAN</title>
   <meta name="description" content="Crie animações em stop motion com a câmera do seu dispositivo.">
-  <meta name="theme-color" content="#1f2a44">
+  <meta name="theme-color" content="#1b2236">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="css/style.css">
@@ -25,9 +28,19 @@
 
   <!-- ============ TELA 1: IDENTIFICAÇÃO ============ -->
   <main id="screenLogin" class="screen">
+    <div class="login-layout">
+    <section class="login-hero">
+      <h1>Dê vida aos seus <em>objetos</em> 🎬</h1>
+      <p class="lead">Monte uma cena, tire uma foto, mexa um pouquinho e fotografe de novo. Juntando as fotos, você cria um filme em stop motion.</p>
+      <ol class="steps">
+        <li><div>Monte a cena <span>· bonecos, massinha, desenhos</span></div></li>
+        <li><div>Fotografe quadro a quadro <span>· mexendo pouco a cada foto</span></div></li>
+        <li><div>Assista e entregue <span>· baixe ou envie ao professor</span></div></li>
+      </ol>
+    </section>
     <section class="card login-card">
-      <h1>Olá! Vamos animar? 🎬</h1>
-      <p class="muted">Antes de começar, diga quem você é. Seus projetos ficam salvos neste dispositivo com o seu nome.</p>
+      <h2>Olá! Quem é você?</h2>
+      <p class="muted">Seus projetos ficam salvos neste dispositivo com o seu nome.</p>
       <form id="loginForm" autocomplete="on">
         <label class="field">
           <span>Seu nome</span>
@@ -49,12 +62,16 @@
         <div id="recentList" class="chips"></div>
       </div>
     </section>
+    </div>
   </main>
 
   <!-- ============ TELA 2: PROJETOS ============ -->
   <main id="screenProjects" class="screen" hidden>
     <div class="screen-head">
-      <h1>Meus projetos</h1>
+      <div>
+        <h1>Meus projetos</h1>
+        <p class="muted sub">Continue uma animação ou comece uma nova.</p>
+      </div>
       <div class="actions">
         <label class="btn ghost" title="Abrir um projeto salvo em arquivo (.stopmotion.json)">
           Importar projeto
@@ -66,7 +83,8 @@
     <div id="projectGrid" class="project-grid"></div>
     <div id="emptyProjects" class="empty" hidden>
       <p>Você ainda não tem nenhum projeto.</p>
-      <p class="muted">Clique em <strong>+ Novo projeto</strong> para começar sua primeira animação.</p>
+      <p class="muted">Que tal criar sua primeira animação agora?</p>
+      <button class="btn primary big" type="button" data-proxy-click="btnNewProject">+ Criar meu primeiro projeto</button>
     </div>
   </main>
 
@@ -106,8 +124,8 @@
           </div>
           <ol class="timeline" id="timeline"></ol>
         </section>
-        <details class="panel" open>
-          <summary>Câmera e ajudas</summary>
+        <details class="panel" id="panelCamera" open>
+          <summary data-icon="🎥">Câmera e ajudas</summary>
           <div class="panel-grid">
             <label class="field inline">
               <span>Câmera</span>
@@ -147,7 +165,7 @@
 
       <aside class="side">
         <div class="panel">
-          <h2>Velocidade</h2>
+          <h2 data-icon="⏱️">Velocidade</h2>
           <label class="field">
             <span><strong id="fpsLabel">8</strong> quadros por segundo</span>
             <input type="range" id="rngFps" min="1" max="24" value="8">
@@ -157,7 +175,7 @@
         </div>
 
         <div class="panel">
-          <h2>Quadro selecionado</h2>
+          <h2 data-icon="🖼️">Quadro selecionado</h2>
           <p class="muted small" id="selInfo">Nenhum quadro.</p>
           <div class="btn-row">
             <button class="btn ghost small" id="btnLeft" type="button" title="Mover para a esquerda">◀ Mover</button>
@@ -169,7 +187,7 @@
         </div>
 
         <div class="panel">
-          <h2>Salvar e exportar</h2>
+          <h2 data-icon="💾">Salvar e exportar</h2>
           <div class="btn-col">
             <button class="btn primary" id="btnSend" type="button" hidden>📤 Enviar ao professor</button>
             <button class="btn primary" id="btnExport" type="button">⬇ Baixar vídeo</button>
@@ -181,7 +199,7 @@
         </div>
 
         <details class="panel help">
-          <summary>Atalhos de teclado</summary>
+          <summary data-icon="⌨️">Atalhos de teclado</summary>
           <ul class="small">
             <li><kbd>Espaço</kbd> tirar foto</li>
             <li><kbd>P</kbd> prévia / parar</li>
@@ -204,5 +222,6 @@
   <script src="js/config.js"></script>
   <script src="js/db.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/ui.js"></script>
 </body>
 </html>
