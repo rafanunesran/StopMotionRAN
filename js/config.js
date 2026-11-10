@@ -9,5 +9,5 @@
  *   - aparece o botão "Enviar ao professor", que manda o vídeo para a pasta da turma.
  * Vazio: o site funciona só neste dispositivo, sem login com senha. */
 window.SMR_CONFIG = {
-  servidorUrl: '',
+  servidorUrl: 'https://script.google.com/macros/s/AKfycbyp17nv7pPusy7RsX39KCltl0_0MUpgD7IgpApP2fOLNv5CdHDLNtH7Tnu6WQrWKPAE/exec',
 };
