@@ -227,8 +227,17 @@
     e.preventDefault();
     accountSubmit($('accLoginForm'), { acao: 'entrar', usuario: $('inUser').value.trim().toLowerCase(), senha: $('inPass').value });
   });
+  // Senhas muito comuns acusam "vazamento" no Google Chrome; o aluno precisa escolher outra.
+  const SENHAS_COMUNS = ['12345678', '123456789', '11111111', 'password', 'senha123', 'senha1234', 'qwertyui', 'abcdefgh', 'teste123', 'teste1234', 'minecraft', 'brasil123'];
   $('accSignupForm').addEventListener('submit', (e) => {
     e.preventDefault();
+    const senha = $('suPass').value;
+    if (senha.length < 8) { toast('A senha precisa ter pelo menos 8 caracteres.', null, null, 5000); $('suPass').focus(); return; }
+    if (SENHAS_COMUNS.indexOf(senha.toLowerCase()) >= 0 || /^(.)\1+$/.test(senha) || /^\d+$/.test(senha)) {
+      toast('Essa senha é fácil demais e pode ser descoberta. Use letras e números que só você conheça.', null, null, 7000);
+      $('suPass').focus();
+      return;
+    }
     accountSubmit($('accSignupForm'), {
       acao: 'cadastrar',
       nome: norm($('suName').value), turma: norm($('suClass').value), escola: norm($('suSchool').value),
