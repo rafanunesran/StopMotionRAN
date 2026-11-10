@@ -507,7 +507,7 @@ kbd {
   .side { position: static; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 }
 @media (max-width: 600px) {
-  .screen { padding: 22px 16px 120px; }
+  .screen { padding: 22px 16px 40px; }
   .brand span { display: none; }
   .who-name { max-width: 34vw; }
   .steps { display: none; }
@@ -519,16 +519,9 @@ kbd {
   .project-grid { grid-template-columns: 1fr; }
   .editor { padding-top: 16px; }
   .stage { border-radius: 14px; box-shadow: 0 0 0 4px var(--ink), var(--shadow); }
-  /* barra de captura fixa embaixo, sempre à mão */
-  .capture-bar {
-    position: fixed; left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 30;
-    width: auto; margin: 0;
-  }
-  .btn.capture { min-width: 0; flex: 1; font-size: 1.1rem; box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 12px 28px -6px rgba(0,0,0,.45); }
   .frame { width: 100px; }
   .frame-del { opacity: 1; }
   .side { grid-template-columns: 1fr; }
-  .toast { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 84px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -561,33 +554,16 @@ body.cam-fs .stage {
   max-height: none; max-width: none; margin: 0; border-radius: 0; box-shadow: none;
 }
 body.cam-fs .stage-tools { top: max(14px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); }
-body.cam-fs .stage-controls { bottom: max(16px, env(safe-area-inset-bottom)); left: max(16px, env(safe-area-inset-left)); }
+body.cam-fs .stage-controls { top: max(14px, env(safe-area-inset-top)); left: max(14px, env(safe-area-inset-left)); }
 body.cam-fs .stage-btn .ico-enter { display: none; }
 body.cam-fs .stage-btn .ico-exit { display: block; }
 body.cam-fs .fs-count {
   display: block; position: absolute; z-index: 2; pointer-events: none;
-  top: max(16px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+  bottom: max(16px, env(safe-area-inset-bottom)); left: max(16px, env(safe-area-inset-left));
   padding: 4px 12px; border-radius: 999px; background: rgba(0,0,0,.55); color: #fff;
   font-size: .85rem; font-weight: 800; backdrop-filter: blur(6px);
 }
-body.cam-fs .capture-bar {
-  position: fixed; z-index: 92; left: 50%; right: auto; transform: translateX(-50%);
-  bottom: max(18px, env(safe-area-inset-bottom)); margin: 0; width: auto;
-}
-body.cam-fs .toast { z-index: 95; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 92px); }
-@media (max-width: 600px) {
-  body.cam-fs .capture-bar { left: 12px; right: 12px; transform: none; }
-}
-@media (orientation: landscape) and (max-height: 500px) {
-  /* celular deitado: botões na lateral direita para não cobrir a cena */
-  body.cam-fs .capture-bar {
-    left: auto; right: max(16px, env(safe-area-inset-right)); top: 50%; bottom: auto;
-    transform: translateY(-50%);
-  }
-  body.cam-fs .btn.capture { min-width: 0; width: 76px; height: 76px; padding: 0; border-radius: 50%; flex: 0 0 auto; }
-  body.cam-fs .btn.capture span:not(.dot) { display: none; }
-  body.cam-fs .btn.capture .dot { width: 30px; height: 30px; }
-}
+body.cam-fs .toast { z-index: 95; }
 
 /* ---------- QR code ---------- */
 .topbar .brand { margin-right: auto; }
@@ -622,7 +598,7 @@ body.cam-fs .toast { z-index: 95; bottom: calc(max(18px, env(safe-area-inset-bot
 /* ---------- câmera / prévia em cima da imagem ---------- */
 .mode-tag { display: none; }
 .stage-controls {
-  position: absolute; left: 10px; bottom: 10px; z-index: 3;
+  position: absolute; left: 10px; top: 10px; z-index: 3;
   display: flex; padding: 4px; gap: 2px; border-radius: 999px;
   background: rgba(0,0,0,.5); backdrop-filter: blur(8px);
 }
@@ -639,7 +615,7 @@ body.cam-fs .toast { z-index: 95; bottom: calc(max(18px, env(safe-area-inset-bot
 .mode-tag.play ~ .stage-controls #btnPlay { background: #fff; color: #1b2236; }
 .mode-tag.play ~ .stage-controls #btnPlay { background: var(--primary); color: #fff; }
 @media (max-width: 600px) {
-  .stage-controls { left: 8px; bottom: 8px; }
+  .stage-controls { left: 8px; top: 8px; }
   .stage-pill { font-size: .82rem; padding: 4px 11px; min-height: 34px; }
   .stage-tools { top: 8px; right: 8px; gap: 6px; }
   .stage-btn { width: 40px; height: 40px; }
@@ -680,5 +656,44 @@ body.cam-fs .toast { z-index: 95; bottom: calc(max(18px, env(safe-area-inset-bot
   .sheet-head::before {
     content: ""; position: absolute; left: 50%; top: 7px; width: 40px; height: 4px; margin-left: -20px;
     border-radius: 999px; background: var(--border-strong);
+  }
+}
+
+/* ---------- botão de foto em cima da imagem (estilo câmera de celular) ---------- */
+.stage .capture-bar {
+  position: absolute; z-index: 4; left: 50%; bottom: 14px; transform: translateX(-50%);
+  margin: 0; padding: 0; width: auto; display: block;
+  background: none; border: 0; box-shadow: none;
+}
+.stage .btn.capture {
+  width: 78px; height: 78px; min-width: 0; min-height: 0; padding: 0; border-radius: 50%;
+  background: rgba(255,255,255,.18); border: 4px solid #fff; backdrop-filter: blur(4px);
+  box-shadow: 0 6px 22px rgba(0,0,0,.45);
+}
+.stage .btn.capture:hover { background: rgba(255,255,255,.3); border-color: #fff; }
+.stage .btn.capture .dot {
+  width: 58px; height: 58px; background: var(--primary); box-shadow: none;
+  transition: transform .12s ease, background .15s;
+}
+.stage .btn.capture:hover .dot { background: var(--primary-hover); }
+.stage .btn.capture:active { transform: none; }
+.stage .btn.capture:active .dot { transform: scale(.82); }
+.stage .btn.capture:disabled { opacity: .6; }
+.stage .btn.capture:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.stage .capture-label {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .stage .capture-bar { bottom: 10px; }
+  .stage .btn.capture { width: 60px; height: 60px; border-width: 3px; }
+  .stage .btn.capture .dot { width: 46px; height: 46px; }
+}
+body.cam-fs .stage .capture-bar { bottom: max(22px, env(safe-area-inset-bottom)); }
+body.cam-fs .stage .btn.capture { width: 84px; height: 84px; }
+body.cam-fs .stage .btn.capture .dot { width: 64px; height: 64px; }
+@media (orientation: landscape) and (max-height: 500px) {
+  /* celular deitado: botão na lateral direita, no meio, como nos apps de câmera */
+  .stage .capture-bar, body.cam-fs .stage .capture-bar {
+    left: auto; bottom: auto; top: 50%; right: max(14px, env(safe-area-inset-right)); transform: translateY(-50%);
   }
 }
